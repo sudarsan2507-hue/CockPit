@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type {
   AgentRun,
   Finding,
@@ -9,6 +10,12 @@ import type {
   Stage,
   ToolVerdict,
 } from "@/lib/types";
+import {
+  getWebMCPDiagnostics,
+  subscribeWebMCPDiagnostics,
+  type WebMCPDiagnostics,
+} from "@/lib/webmcp";
+
 
 const STAGES: { id: Stage; label: string }[] = [
   { id: "discovering", label: "Discover" },
@@ -217,3 +224,90 @@ export function ActivityLog({ entries }: { entries: LogEntry[] }) {
     </div>
   );
 }
+
+export function WebMCPStatusPanel() {
+  const [diag, setDiag] = useState<WebMCPDiagnostics | null>(null);
+
+  useEffect(() => {
+    setDiag(getWebMCPDiagnostics());
+    return subscribeWebMCPDiagnostics(() => {
+      setDiag(getWebMCPDiagnostics());
+    });
+  }, []);
+
+  if (!diag) {
+    return (
+      <div className="mono text-xs subtle space-y-1">
+        <div>Checking WebMCP status...</div>
+      </div>
+    );
+  }
+
+  if (!diag.apiAvailable) {
+    return (
+      <div className="space-y-3">
+        <div className="mono text-xs space-y-1.5">
+          <div className="font-semibold" style={{ color: "var(--text)" }}>WEBMCP STATUS</div>
+          <div className="flex justify-between">
+            <span className="subtle">API available:</span>
+            <span style={{ color: "var(--bad)" }}>NO</span>
+          </div>
+        </div>
+        <p className="subtle text-xs">
+          Open this application in a WebMCP-enabled browser (e.g. Chrome with WebMCP flag/extension or ChatGPT in-app browser).
+        </p>
+        <div>
+          <a href="/webmcp-test" className="btn text-xs py-1 inline-block">
+            Open Smoke Test →
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="mono text-xs space-y-1">
+        <div className="font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text)" }}>
+          WEBMCP STATUS
+        </div>
+        <div className="flex justify-between">
+          <span className="subtle">API available:</span>
+          <span style={{ color: "var(--ok)" }}>YES</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="subtle">modelContext:</span>
+          <span style={{ color: "var(--ok)" }}>YES</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="subtle">registerTool:</span>
+          <span style={{ color: "var(--ok)" }}>YES</span>
+        </div>
+      </div>
+
+      <div className="border-t pt-2 space-y-1" style={{ borderColor: "var(--line)" }}>
+        <div className="text-xs subtle mb-1">Registered tools:</div>
+        {diag.registeredTools.length === 0 ? (
+          <div className="subtle text-xs mono">No tools currently registered</div>
+        ) : (
+          <div className="space-y-1 mono text-xs">
+            {diag.registeredTools.map((tool) => (
+              <div key={tool} className="flex items-center gap-1.5" style={{ color: "var(--ok)" }}>
+                <span>✓</span>
+                <span style={{ color: "var(--text)" }}>{tool}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between text-xs subtle pt-1 border-t" style={{ borderColor: "var(--line)" }}>
+        <span>Tool count:</span>
+        <span className="mono font-semibold" style={{ color: "var(--text)" }}>
+          {diag.registeredTools.length}
+        </span>
+      </div>
+    </div>
+  );
+}
+

@@ -77,16 +77,20 @@ export function Storefront() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <span className={webmcp ? "pill pill-ok" : "pill pill-warn"}>
+            {webmcp === null ? "WebMCP ○ Checking" : webmcp ? "WebMCP ● Available" : "WebMCP ○ Unavailable"}
+          </span>
           <span className={registered.length ? "pill pill-ok" : "pill pill-idle"}>
             {registered.length
-              ? `${registered.length} WebMCP tools registered`
-              : "no WebMCP tools"}
+              ? `${registered.length} tools registered`
+              : "no tools"}
           </span>
           <Link href="/" className="btn">
             ← Back to Forge
           </Link>
         </div>
       </header>
+
 
       {!manifest && (
         <div className="panel p-4">

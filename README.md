@@ -80,9 +80,9 @@ then tell me my order status"* — is run two ways against the generated tools:
 
 ## WebMCP surfaces
 
-This project registers tools in two places.
+This project registers tools in three places.
 
-**The Forge dashboard** exposes its own controls over WebMCP, so an agent drives
+**The Forge dashboard (`/`)** exposes its own 6 control tools over WebMCP, so an agent drives
 the pipeline while a human watches the same screen update:
 
 `forge_analyze_repo` · `forge_list_tools` · `forge_run_security_scan` ·
@@ -91,40 +91,71 @@ the pipeline while a human watches the same screen update:
 > Try: *"Analyze the demo storefront, scan the tools it generates, and tell me
 > which ones you would refuse to use."*
 
-**The demo storefront** at `/shop` registers whatever Forge generated. On its own
-it exposes nothing — it is an ordinary Next.js app. Run an analysis, return to
-it, and the generated tools are live.
+**The demo storefront (`/shop`)** registers whatever Forge generated. On its own
+it exposes nothing — it is an ordinary Next.js app. Run an analysis in Forge, return to
+the shop, and the generated tools are registered directly in the browser.
 
-The API is `SecureContext`-only and the getter moved from `Navigator` to
-`Document` in the May 2026 draft, so [`src/lib/webmcp.ts`](src/lib/webmcp.ts)
-reads `document.modelContext` first and falls back to `navigator.modelContext`
-for older builds.
+**The WebMCP smoke test page (`/webmcp-test`)** isolates WebMCP API detection, tool
+registration (`hello_webmcp`), tool visibility, and execution into a clean verification matrix.
 
-## Running it
+The API is `SecureContext`-only (`https://` or `localhost`). Per the W3C / Chromium WebMCP
+specification, [`src/lib/webmcp.ts`](src/lib/webmcp.ts) registers tools via:
+`document.modelContext.registerTool(tool, { signal })` and falls back to `navigator.modelContext`
+for older browser drafts.
+
+## Supported WebMCP Environment
+
+1. **Chromium / Chrome with WebMCP enabled**: Experimental WebMCP flag or browser extensions implementing `document.modelContext.registerTool()`.
+2. **ChatGPT in-app browser**: Browsers exposing `document.modelContext` to assistant models.
+3. **Standard browsers (Chrome, Firefox, Safari, Edge)**: Graceful fallback — displays `WebMCP ○ Unavailable` without crashing, with all manual and simulator controls intact.
+
+## Running & Testing
 
 ```bash
+# Install dependencies
 npm install
+
+# Run automated test suites (unit tests for WebMCP client, manifest pipeline, security gate)
+npm test
+
+# Run TypeScript typecheck
+npm run typecheck
+
+# Start local development server
 npm run dev     # http://localhost:3000 — localhost is a secure context
 ```
 
-No API key is needed. The bundled demo storefront is analyzed without any network
-access. Set `GITHUB_TOKEN` in `.env.local` only to raise the rate limit when
-analyzing arbitrary public repositories.
+### How to Test WebMCP
 
-- `/` — the Forge dashboard
-- `/shop` — the demo storefront being analyzed
+1. **Automated Unit Tests**:
+   ```bash
+   npm test
+   ```
+   Runs 15 automated test suites validating `document.modelContext` detection, fallback resolution, `AbortSignal` registration/disposal, duplicate registration resilience, manifest conversion, policy gate egress blocking, and guarded/unguarded agent execution.
 
-## Limits
+2. **Real Browser Smoke Test**:
+   - Navigate to `http://localhost:3000/webmcp-test`
+   - Validates live browser `document.modelContext.registerTool()`, registers `hello_webmcp`, and tests execution.
 
-Forge reads **Next.js App Router route handlers only** (`app/**/route.ts`), using
-regex rather than an AST: `export async function GET`, `searchParams.get(...)`,
-and destructured `await request.json()`. Pages Router, Express, FastAPI and
-Django yield nothing. The storefront cart is in-memory and resets on a cold
-start. See [plan.md](plan.md) for the full list.
+3. **Forge Dashboard Real Registration**:
+   - Open `http://localhost:3000`
+   - Check the header status pill (`WebMCP ● Available`) and the WebMCP Diagnostics panel showing the 6 registered Forge control tools.
+
+4. **Storefront Generated Tool Registration**:
+   - On the Forge dashboard, click **Analyze**
+   - Click **Open the storefront →** (`/shop`)
+   - The 5 generated tools (`search_products`, `get_product`, `add_to_cart`, `checkout`, `track_order`) are dynamically registered client-side via `document.modelContext.registerTool()`.
+
+## Known Browser Limitations
+
+- **Secure Context Requirement**: The WebMCP API is only exposed in secure contexts (`https://` or `http://localhost`). It will not be exposed on unencrypted HTTP domains.
+- **Lifecycle Mechanism**: Modern WebMCP implementations use `AbortSignal` passed in `{ signal }` for lifecycle/unregistration. Older implementations used `document.modelContext.unregisterTool()`. `src/lib/webmcp.ts` supports both.
+- **Single Page App Routing**: In Next.js SPA transitions, tool disposers clean up registered tools upon component unmount and re-register on target page mount.
 
 ## Layout
 
 ```
+src/lib/webmcp.ts              real WebMCP browser wrapper (detection, lifecycle, diagnostics)
 src/lib/analyzer.ts            routes -> capabilities -> WebMCP tools
 src/lib/executor.ts            manifest -> real HTTP request, no per-tool code
 src/lib/codegen.ts             manifest + verdicts -> integration source
@@ -132,10 +163,14 @@ src/lib/security/rules.ts      the three checks
 src/lib/security/monitor.ts    the policy gate
 src/lib/security/scan.ts       static pass, runtime merge
 src/lib/agent/runner.ts        guarded and unguarded agents
-src/components/useForgeTools.ts  the dashboard's own WebMCP tools
+src/components/useForgeTools.ts  the dashboard's own 6 WebMCP tools
+src/components/Panels.tsx      UI panels including WebMCPStatusPanel diagnostic inspector
+src/app/webmcp-test/page.tsx   standalone /webmcp-test browser smoke test page
 src/app/api/*                  the demo storefront's API, and the analyzer endpoint
+tests/*.test.ts                automated unit tests
 ```
 
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
+

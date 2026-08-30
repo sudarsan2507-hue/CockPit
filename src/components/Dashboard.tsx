@@ -7,7 +7,7 @@ import { generateIntegration } from "@/lib/codegen";
 import { summarise } from "@/lib/security/scan";
 import { isWebMCPAvailable } from "@/lib/webmcp";
 import { useForgeTools } from "./useForgeTools";
-import { ActivityLog, AgentPanel, PipelineRail, RequestLog, ToolCard } from "./Panels";
+import { ActivityLog, AgentPanel, PipelineRail, RequestLog, ToolCard, WebMCPStatusPanel } from "./Panels";
 
 function Section({
   title,
@@ -80,13 +80,17 @@ export function Dashboard() {
         </div>
         <div className="flex items-center gap-2">
           <span className={webmcp ? "pill pill-ok" : "pill pill-warn"}>
-            {webmcp === null ? "checking" : webmcp ? "WebMCP available" : "WebMCP not detected"}
+            {webmcp === null ? "WebMCP ○ Checking" : webmcp ? "WebMCP ● Available" : "WebMCP ○ Unavailable"}
           </span>
+          <Link href="/webmcp-test" className="btn">
+            Smoke test
+          </Link>
           <Link href="/shop" className="btn">
             Open the storefront →
           </Link>
         </div>
       </header>
+
 
       <div className="panel p-4 space-y-3">
         <div className="flex gap-2 flex-wrap items-center">
@@ -197,6 +201,10 @@ export function Dashboard() {
         </div>
 
         <div className="space-y-4">
+          <Section title="WebMCP Diagnostics" hint="Real browser modelContext registration status.">
+            <WebMCPStatusPanel />
+          </Section>
+
           <Section title="Activity" hint="Human and agent actions land in the same stream.">
             <ActivityLog entries={state.log} />
           </Section>
@@ -216,6 +224,7 @@ export function Dashboard() {
             </p>
           </Section>
         </div>
+
       </div>
     </main>
   );
