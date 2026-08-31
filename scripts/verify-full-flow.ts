@@ -77,7 +77,6 @@ async function main() {
   };
 
   // Attach mock modelContext to global document
-  // @ts-expect-error test mock
   if (typeof globalThis.document === "undefined") {
     // @ts-expect-error test mock
     globalThis.document = {};
