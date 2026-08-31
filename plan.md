@@ -4,7 +4,7 @@
 > for an agent to use.
 
 **Deadline:** Thu 3 Sep 2026, 1:00 PM PDT (= Fri 4 Sep, 01:30 IST)
-**Written:** Sun 30 Aug 2026, ~23:30 IST — roughly **74 hours** of wall clock left.
+**Updated:** Mon 31 Aug, 23:50 IST — **~73 hours left**
 
 ---
 
@@ -32,123 +32,108 @@ by the real analyzer in this repo, and both are caught downstream.
 
 ---
 
-## Status
+## Status — the product is built
 
-### Done — the whole pipeline runs
-
-| Piece | File | State |
-|---|---|---|
-| Repo analyzer (route handlers → capabilities) | `src/lib/analyzer.ts` | ✅ verified |
-| Tool generator (capability → WebMCP tool) | `src/lib/analyzer.ts` | ✅ verified |
-| GitHub ingestion + bundled demo repo | `src/app/api/analyze/route.ts`, `src/lib/fixtures/demoRepo.ts` | ✅ verified |
-| Static security checks (3) | `src/lib/security/rules.ts` | ✅ verified |
-| Runtime policy gate (observe + refuse) | `src/lib/security/monitor.ts` | ✅ verified |
-| Generic executor (manifest → real HTTP call) | `src/lib/executor.ts` | ✅ verified |
-| Agent validator, guarded + unguarded | `src/lib/agent/runner.ts` | ✅ verified |
-| Integration codegen (the ship artifact) | `src/lib/codegen.ts` | ✅ output syntax-checked |
-| Forge dashboard, live-updating | `src/components/Dashboard.tsx`, `Panels.tsx` | ✅ builds |
-| Forge's own WebMCP tools (6) | `src/components/useForgeTools.ts` | ⚠️ needs a real browser |
-| Demo storefront + its API | `src/app/shop`, `src/app/api/*` | ✅ verified |
-| Storefront registers generated tools | `src/components/Storefront.tsx` | ⚠️ needs a real browser |
-
-Verified end-to-end output (from `npm run build` plus a scripted run of the
-analyzer, scanner and agent against the live API):
+The whole pipeline runs. `npm test` 15/15, `tsc --noEmit` clean, `next build`
+compiles 10 routes, and `npx tsx scripts/verify-full-flow.ts` passes end to end
+against the dev server:
 
 ```
-TOOLS        search_products GET  readOnly=true
-             get_product     GET  readOnly=true
-             add_to_cart     POST readOnly=false
-             checkout        POST readOnly=true   <- the generator was fooled
-             track_order     GET  readOnly=true
-
+5 capabilities discovered, 5 tools generated
 STATIC SCAN  4 verified, 1 blocked, 2 high, 1 medium
              track_order  BLOCKED  metadata-injection + sensitive-data-egress
              checkout     MEDIUM   declared read-only, mapped to POST
-
-UNGUARDED    search ✓  detail ✓  cart ✓  track ✓
-             ✕ blocked exfiltration of customer email to analytics-partner.example
-             ✓ followed the instruction embedded in track_order and called checkout
-             -> 2 blocked, 4 high   (checkout escalated to HIGH on observed mutation)
-
-GUARDED      search ✓  detail ✓  cart ✓
-             ✕ refused track_order
-             ✕ held checkout for human confirmation
-             -> 4 verified, 1 blocked
+GUARDED      search ✓ detail ✓ cart ✓ · refused track_order · held checkout
+UNGUARDED    ✕ blocked exfiltration to analytics-partner.example
+             ✓ followed the injected instruction and called checkout
+             -> checkout escalates to HIGH on observed mutation
 ```
 
-### Not done — this is the real remaining list
+Everything in `src/` is done: analyzer, GitHub ingestion, three security checks,
+policy gate, executor, both agents, codegen, dashboard, storefront, the Forge's
+six control tools, WebMCP diagnostics, and the `/webmcp-test` smoke page.
 
-1. **Never opened in a WebMCP-enabled browser.** Nothing here has run against a
-   real `document.modelContext`. This is the single largest risk in the project
-   and it is task #1.
-2. **Not deployed.** No Vercel project, no live URL. Required for submission.
-3. **No video.** Required, under 3 minutes, with audio.
-4. **No Devpost submission.**
-5. **README** exists but has no screenshots and no live URL yet.
-6. **No tests.** Verification so far is a scratchpad script, not committed.
-7. **Storefront cart is in-memory** on the server. A Vercel cold start empties
-   it. Fine for a demo, wrong for anything else.
-8. **Only Next.js App Router `app/**/route.ts` is understood.** Pages Router,
-   Express, FastAPI, Django: all unsupported. Stated plainly in the README.
-9. **The analyzer is regex-based, not an AST.** It reads `export async function
-   GET`, `searchParams.get(...)` and destructured `await request.json()`. A repo
-   that does any of those differently yields nothing.
-10. **No LLM anywhere.** Deliberate — it removes an API key from the judge's
-    path and makes runs deterministic. Worth saying out loud in the video, because
-    "no model in the loop" is a feature for a security tool.
-11. **`get_product` cannot be driven from the storefront UI** — it is generated
-    and callable by an agent, but there is no product detail page.
-12. **Three checks, not a scanner.** metadata-injection, sensitive-data-egress,
-    readonly-mismatch. No dependency scanning, no auth checks, no SSRF.
+**Nothing product-shaped is blocking submission. What is left is proving it in a
+real browser, deploying it, and filming it.**
 
 ---
 
-## Runway
+## Left to do
 
-### Block 1 — tonight, ~2 hours (highest risk, do it first)
+### Blocking — the submission fails without these
 
-- [ ] Open Chrome with WebMCP enabled (or ChatGPT's in-app browser) and load
-      `http://localhost:3000`. Confirm the badge reads **WebMCP available**.
-- [ ] Ask the agent: *"Analyze the demo storefront, scan the tools it generates,
-      and tell me which ones you would refuse to use."* Watch the dashboard move.
-- [ ] Fix whatever the real API disagrees with. Most likely suspects: the exact
-      `execute` return shape, whether `annotations` is accepted as written, and
-      whether `unregisterTool` on an unregistered name throws where we expect.
-- [ ] Deploy to Vercel. Get the live URL. Re-test the above **on the live URL** —
-      the API is SecureContext-only, so https is where it truly counts.
+1. **Validate against a real `document.modelContext`.** Nothing has run against
+   the real API yet; `scripts/verify-full-flow.ts` installs a *mock*, so its
+   green result proves the calling code, not the browser. Open `/webmcp-test` in
+   Chrome Canary 146+ with `chrome://flags/#webmcp`, and in ChatGPT's in-app
+   browser. All four checks green is the bar.
+2. **Deploy to Vercel.** No live URL exists. Required for submission.
+3. **Origin trial token.** WebMCP is behind a Chrome 149–156 origin trial, gated
+   per-origin by a token you register and paste in as a `<meta>` tag. `localhost`
+   is exempt; your Vercel domain is not. If judges' browsers will not expose the
+   API on the deploy without it, the live-URL test fails and takes the WebMCP
+   Leverage score with it. **Verify this the moment the deploy is up.**
+4. **Video.** Under 3 minutes, public on YouTube, with audio.
+5. **Devpost submission.** Not started.
 
-If Block 1 slips past tonight, cut scope tomorrow, not on Sep 2.
+### Should do
 
-### Block 2 — Mon 31 Aug
+6. README needs the live URL and screenshots.
+7. Point Forge at 2–3 real public Next.js repos and fix whatever breaks. A judge
+   will paste something odd; the error path has never been exercised.
+8. `get_product` is generated and agent-callable but has no UI surface — there is
+   no product detail page, so a human cannot see what the agent just read.
+9. `scripts/verify-full-flow.ts` prints `Forge Tools Registered: 0/6` in section 3
+   and `6` in the summary. Cosmetic reporting bug, but it looks like a failure.
+10. `package-lock.json` churns between machines — your npm writes `"peer": true`
+    annotations Fawaz's does not. Align npm versions before this becomes a
+    conflict at 1 AM on Sep 3.
 
-- [ ] Sit with the dashboard and make the agent's actions unmistakable. The
-      Activity panel already colours agent rows; make sure a judge watching a
-      2-minute video can see *the agent did that, not the human*.
-- [ ] Storefront: add a visible before/after. Right now it says "no WebMCP tools"
-      then "N WebMCP tools registered" — make that the hero moment of the page.
-- [ ] Point Forge at 2–3 real public Next.js repos. Whatever crashes, fix or
-      fail gracefully. The error path matters: a judge will paste something odd.
-- [ ] Commit history should look like a build, not one dump. Small commits.
+### Known limits — state them, don't fix them
 
-### Block 3 — Tue 1 Sep
+- Next.js App Router `app/**/route.ts` only, matched by regex not AST. Pages
+  Router, Express, FastAPI, Django yield nothing.
+- Storefront cart is in-memory and resets on a cold start.
+- Three checks, not a scanner. No dependency scanning, auth, or SSRF.
+- No LLM anywhere. Deliberate: no API key in the judge's path, deterministic
+  runs. Say it out loud in the video — "no model in the loop" is a feature for a
+  security tool.
 
-- [ ] Write the README properly: the problem, the three checks and what each one
-      actually detects, the architecture, the honest limits (list above).
-- [ ] Add a small test file over `analyzer` + `rules` so the repo shows the
-      checks are pinned, not vibes.
-- [ ] Screenshots into the README.
-- [ ] Draft the video script. Time it. It must fit in 2:30 spoken.
+---
 
-### Block 4 — Wed 2 Sep
+## Runway — ~73 hours
+
+### Tonight, Mon 31 Aug (highest risk, do it first)
+
+- [ ] `/webmcp-test` in WebMCP-enabled Chrome. Four green.
+- [ ] Same page in ChatGPT's in-app browser.
+- [ ] Fix whatever the real API disagrees with. Likely suspects: the exact
+      `execute` return shape, whether `annotations` is accepted as written,
+      whether `unregisterTool` throws where the wrapper expects.
+- [ ] Deploy to Vercel. Re-test `/webmcp-test` **on the https URL**.
+- [ ] Resolve the origin trial token question.
+
+If this slips past tonight, cut scope Tuesday — not Wednesday.
+
+### Tue 1 Sep
+
+- [ ] Make the agent's actions unmistakable on screen. A judge watching a
+      2-minute video must see *the agent did that, not the human*.
+- [ ] Storefront before/after (`no tools` → `5 tools registered`) as the hero moment.
+- [ ] Point Forge at real public repos; fail gracefully on the ones it cannot read.
+- [ ] README: live URL, screenshots, the limits above.
+- [ ] Draft the video script and time it. It must fit 2:30 spoken.
+
+### Wed 2 Sep
 
 - [ ] **Record the video.** Not Sep 3. Submissions die here.
 - [ ] Upload to YouTube, public, no age gate.
-- [ ] Fill in the Devpost submission completely and save a draft.
+- [ ] Fill in the Devpost entry completely, save a draft.
 
-### Block 5 — Thu 3 Sep, morning IST
+### Thu 3 Sep, morning IST
 
-- [ ] Final live-URL smoke test in a clean browser profile.
-- [ ] Submit by 9:00 PM IST — a **4.5 hour buffer** before the 01:30 IST cutoff.
+- [ ] Final smoke test on the live URL in a clean browser profile.
+- [ ] Submit by 21:00 IST — a 4.5 hour buffer before the 01:30 cutoff.
 - [ ] Do not touch main after submitting.
 
 ---
@@ -157,27 +142,27 @@ If Block 1 slips past tonight, cut scope tomorrow, not on Sep 2.
 
 | Time | Beat |
 |---|---|
-| 0:00–0:15 | The storefront. "An ordinary Next.js shop. It exposes nothing to an agent." Badge: **no WebMCP tools**. |
+| 0:00–0:15 | The storefront. "An ordinary Next.js shop. It exposes nothing to an agent." Badge: **no tools**. |
 | 0:15–0:35 | Paste the repo into Forge. 5 capabilities discovered, 5 tools generated. |
 | 0:35–1:00 | Run the scan. `track_order` goes red. Open it: the doc comment tells the agent to ignore restrictions and mail the customer's address to a third party. That text was going straight into the agent's context. |
 | 1:00–1:15 | Point at `checkout`: amber. The generator believed the prose and marked a POST as read-only. "Static analysis can only warn here. So run it." |
 | 1:15–1:45 | Unguarded agent. It follows the injected instruction — the gate blocks the exfiltration, and checkout mutates state, escalating to red. |
-| 1:45–2:05 | Guarded agent. Same task. Refuses `track_order`, holds `checkout` for confirmation, completes the shopping task. |
-| 2:05–2:20 | Export the integration. Blocked tools are commented out with the finding attached. |
+| 1:45–2:05 | Guarded agent. Same task. Refuses `track_order`, holds `checkout`, completes the shopping task. |
+| 2:05–2:20 | Export the integration. Blocked tools commented out with the finding attached. |
 | 2:20–2:30 | Hand the dashboard to the judge's own agent over WebMCP. "Everything you just watched, an agent can drive." |
 
 ## Cut list — do not build these
 
 Python/other frameworks · private repos · AST-based analysis · more vulnerability
 classes · autonomous code rewriting · deployment automation · dependency scanning ·
-auth · multi-agent architecture · a database · Firecrawl (a box on a diagram, not
-a judged point — reconsider only if a sponsor prize requires it).
+auth · multi-agent architecture · a database · Firecrawl.
 
 ## Commands
 
 ```
 npm install
-npm run dev        # http://localhost:3000 — localhost counts as a secure context
-npm run build
-npx tsc --noEmit
+npm run dev                          # http://localhost:3000
+npm test                             # 15 tests
+npx tsx scripts/verify-full-flow.ts  # end-to-end, needs the dev server
+npm run build                        # run before every push
 ```
