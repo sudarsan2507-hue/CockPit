@@ -146,6 +146,21 @@ npm run dev     # http://localhost:3000 — localhost is a secure context
    - Click **Open the storefront →** (`/shop`)
    - The 5 generated tools (`search_products`, `get_product`, `add_to_cart`, `checkout`, `track_order`) are dynamically registered client-side via `document.modelContext.registerTool()`.
 
+## Deploying
+
+WebMCP runs as a Chrome origin trial, gated **per-origin** by a token registered
+against the deployed domain. `localhost` is exempt; a deployed domain is not —
+without the token `document.modelContext` is simply absent for every visitor.
+
+1. Register the deployed origin at the Chrome origin trials console.
+2. Set `NEXT_PUBLIC_WEBMCP_ORIGIN_TRIAL_TOKEN`. The root layout emits the
+   `<meta http-equiv="origin-trial">` tag from it.
+3. Set `GITHUB_TOKEN`. Unauthenticated GitHub allows 60 requests per hour per IP
+   and serverless IPs are shared, so without it a pasted repository URL will
+   usually fail. A classic PAT with no scopes is enough.
+4. Open `/webmcp-test` on the live URL and confirm all four checks pass. This is
+   the check that matters: `localhost` proves nothing about the deploy.
+
 ## Known Browser Limitations
 
 - **Secure Context Requirement**: The WebMCP API is only exposed in secure contexts (`https://` or `http://localhost`). It will not be exposed on unencrypted HTTP domains.
