@@ -23,6 +23,8 @@ export function Storefront() {
   const [manifest, setManifest] = useState<ToolManifest | null>(null);
   const [registered, setRegistered] = useState<string[]>([]);
   const [webmcp, setWebmcp] = useState<boolean | null>(null);
+  const [selected, setSelected] = useState<Product | null>(null);
+  const [lastAgentTool, setLastAgentTool] = useState<string | null>(null);
 
   const refresh = useCallback(async (search: string) => {
     const params = new URLSearchParams();
@@ -57,6 +59,14 @@ export function Storefront() {
       annotations: tool.annotations,
       execute: async (input) => {
         const result = await makeExecutor(tool, gate)(input);
+        // Surface what the agent just read, so a person watching the page can
+        // see the tool call land rather than having to take it on trust.
+        if (tool.name === "get_product" && result.ok && result.data) {
+          setSelected(result.data as Product);
+          setLastAgentTool(tool.name);
+        } else if (result.ok) {
+          setLastAgentTool(tool.name);
+        }
         void refresh(query);
         return result;
       },
