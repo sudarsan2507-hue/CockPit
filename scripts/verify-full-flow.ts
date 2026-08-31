@@ -76,7 +76,16 @@ async function main() {
     },
   };
 
-  // Attach mock modelContext to global document
+  // Attach mock modelContext to global document.
+  //
+  // getModelContext() returns null when window is undefined, so a document
+  // shim alone is not enough: registerTools would no-op and every count below
+  // would report zero while looking like it had run. The window shim is what
+  // makes this exercise the real registration path.
+  if (typeof globalThis.window === "undefined") {
+    // @ts-expect-error test mock
+    globalThis.window = { location: { origin: BASE_URL } };
+  }
   if (typeof globalThis.document === "undefined") {
     // @ts-expect-error test mock
     globalThis.document = {};
