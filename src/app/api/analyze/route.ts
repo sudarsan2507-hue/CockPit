@@ -75,7 +75,15 @@ async function fetchRepoFiles(owner: string, repo: string): Promise<RepoFile[]> 
     { headers: githubHeaders() },
   );
   if (!tree.ok) throw githubError(tree, owner, repo);
-  const { tree: entries } = (await tree.json()) as { tree: TreeEntry[] };
+  const { tree: entries, truncated } = (await tree.json()) as {
+    tree: TreeEntry[];
+    truncated?: boolean;
+  };
+
+  // GitHub caps a recursive tree, so a very large repo arrives incomplete.
+  if (truncated) {
+    console.warn(`[analyze] ${owner}/${repo} tree was truncated by GitHub`);
+  }
 
   const routeFiles = entries
     .filter((entry) => entry.type === "blob" && /app\/.*\/route\.[tj]sx?$/.test(entry.path))
