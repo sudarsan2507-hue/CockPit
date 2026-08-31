@@ -33,18 +33,48 @@ function githubHeaders(): HeadersInit {
   return headers;
 }
 
+/**
+ * Turns a GitHub failure into something the person reading it can act on.
+ *
+ * The unauthenticated API allows 60 requests per hour per IP, and serverless
+ * IPs are shared, so an exhausted limit is the failure this endpoint hits most
+ * often in production — not a bad URL.
+ */
+function githubError(response: Response, owner: string, repo: string): Error {
+  if (response.status === 403 || response.status === 429) {
+    const remaining = response.headers.get("x-ratelimit-remaining");
+    if (remaining === "0") {
+      const reset = Number(response.headers.get("x-ratelimit-reset") ?? 0);
+      const minutes = reset ? Math.max(1, Math.ceil((reset * 1000 - Date.now()) / 60000)) : null;
+      return new Error(
+        `GitHub's API rate limit is exhausted for this deployment` +
+          (minutes ? `; it resets in about ${minutes} minute(s)` : "") +
+          `. Set GITHUB_TOKEN to raise the limit. The bundled demo storefront ` +
+          `needs no network access — leave the field empty to run the full pipeline now.`,
+      );
+    }
+    return new Error(`GitHub refused the request for ${owner}/${repo} (403).`);
+  }
+  if (response.status === 404) {
+    return new Error(
+      `No public repository at ${owner}/${repo}. Private repositories are not supported.`,
+    );
+  }
+  return new Error(`GitHub returned ${response.status} for ${owner}/${repo}.`);
+}
+
 async function fetchRepoFiles(owner: string, repo: string): Promise<RepoFile[]> {
   const meta = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
     headers: githubHeaders(),
   });
-  if (!meta.ok) throw new Error(`GitHub returned ${meta.status} for ${owner}/${repo}`);
+  if (!meta.ok) throw githubError(meta, owner, repo);
   const { default_branch: branch } = (await meta.json()) as { default_branch: string };
 
   const tree = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
     { headers: githubHeaders() },
   );
-  if (!tree.ok) throw new Error(`Could not read the file tree (${tree.status}).`);
+  if (!tree.ok) throw githubError(tree, owner, repo);
   const { tree: entries } = (await tree.json()) as { tree: TreeEntry[] };
 
   const routeFiles = entries
