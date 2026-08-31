@@ -133,7 +133,16 @@ export function Storefront() {
             {products.map((product) => (
               <div key={product.id} className="panel p-3 flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm">{product.name}</div>
+                  <button
+                    className="text-sm text-left cursor-pointer hover:underline"
+                    onClick={async () => {
+                      const response = await fetch(`/api/products/${product.id}`);
+                      setSelected(await response.json());
+                      setLastAgentTool(null);
+                    }}
+                  >
+                    {product.name}
+                  </button>
                   <div className="subtle text-xs mt-1 mono">
                     {product.id} · {product.colour} · ₹{product.price.toLocaleString("en-IN")}
                   </div>
@@ -158,6 +167,31 @@ export function Storefront() {
         </div>
 
         <aside className="space-y-3">
+          {selected && (
+            <div
+              className="panel p-4 flash"
+              style={{ borderColor: lastAgentTool ? "var(--accent)" : undefined }}
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h2 className="text-sm font-semibold uppercase tracking-wide">Product detail</h2>
+                {lastAgentTool && <span className="pill pill-ok">read by agent</span>}
+              </div>
+              <div className="text-sm">{selected.name}</div>
+              <div className="subtle text-xs mt-1 mono">
+                {selected.id} · {selected.colour} · {selected.category}
+              </div>
+              <div className="text-sm mt-2 mono">
+                ₹{selected.price.toLocaleString("en-IN")}
+                <span className="subtle"> · {selected.stock} in stock</span>
+              </div>
+              {lastAgentTool && (
+                <p className="subtle text-xs mt-2">
+                  Loaded by <span className="mono">{lastAgentTool}</span> over WebMCP.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="panel p-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide mb-2">Cart</h2>
             {cart.length === 0 ? (
