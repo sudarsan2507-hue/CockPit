@@ -4,7 +4,7 @@
 > for an agent to use.
 
 **Deadline:** Thu 3 Sep 2026, 1:00 PM PDT (= Fri 4 Sep, 01:30 IST)
-**Updated:** Mon 31 Aug, 23:50 IST — **~73 hours left**
+**Updated:** Tue 1 Sep, 00:55 IST — **~72 hours left**
 
 ---
 
@@ -62,29 +62,35 @@ real browser, deploying it, and filming it.**
 
 ### Blocking — the submission fails without these
 
-1. **Validate against a real `document.modelContext`.** Nothing has run against
-   the real API yet; `scripts/verify-full-flow.ts` installs a *mock*, so its
-   green result proves the calling code, not the browser. Open `/webmcp-test` in
-   Chrome Canary 146+ with `chrome://flags/#webmcp`, and in ChatGPT's in-app
-   browser. All four checks green is the bar.
-2. **Deploy to Vercel.** No live URL exists. Required for submission.
-3. **Origin trial token.** WebMCP is behind a Chrome 149–156 origin trial, gated
+1. ~~**Validate against a real `document.modelContext`.**~~ **DONE — 1 Sep, 00:46 IST.**
+   `/webmcp-test` on localhost in a real browser: all four checks green. API
+   detected, `registerTool` accepted, tool visible in the registry, tool executed
+   and returned its payload. The inspector reported `document.modelContext:
+   DETECTED` and `navigator.modelContext: ABSENT`, which confirms the
+   document-first ordering in `src/lib/webmcp.ts` — a navigator-first wrapper
+   would have reported "unavailable" on a browser that fully supports the API.
+   The real API agreed with the wrapper on every point; no fixes were needed.
+2. **Confirm the generated tools register.** The smoke test proved a hand-written
+   `hello_webmcp`. It did not prove the 6 Forge control tools or the 5 generated
+   storefront tools. Dashboard Diagnostics should list 6; `/shop` should flip from
+   `no WebMCP tools` to `5 WebMCP tools registered` after an Analyze. Two minutes,
+   same browser, no deploy needed.
+3. **Deploy to Vercel.** No live URL exists. Required for submission.
+4. **Origin trial token.** WebMCP is behind a Chrome 149–156 origin trial, gated
    per-origin by a token you register and paste in as a `<meta>` tag. `localhost`
    is exempt; your Vercel domain is not. If judges' browsers will not expose the
    API on the deploy without it, the live-URL test fails and takes the WebMCP
    Leverage score with it. **Verify this the moment the deploy is up.**
-4. **Video.** Under 3 minutes, public on YouTube, with audio.
-5. **Devpost submission.** Not started.
+5. **Video.** Under 3 minutes, public on YouTube, with audio.
+6. **Devpost submission.** Not started. Copy is written in `SUBMISSION.md`.
 
 ### Should do
 
-6. README needs the live URL and screenshots.
-7. Point Forge at 2–3 real public Next.js repos and fix whatever breaks. A judge
+7. README needs the live URL and screenshots.
+8. Point Forge at 2–3 real public Next.js repos and fix whatever breaks. A judge
    will paste something odd; the error path has never been exercised.
-8. `get_product` is generated and agent-callable but has no UI surface — there is
-   no product detail page, so a human cannot see what the agent just read.
-9. `scripts/verify-full-flow.ts` prints `Forge Tools Registered: 0/6` in section 3
-   and `6` in the summary. Cosmetic reporting bug, but it looks like a failure.
+9. Re-run `/webmcp-test` in ChatGPT's in-app browser. Chrome passing does not
+   prove the environment judges will actually use.
 10. `package-lock.json` churns between machines — your npm writes `"peer": true`
     annotations Fawaz's does not. Align npm versions before this becomes a
     conflict at 1 AM on Sep 3.
@@ -101,19 +107,15 @@ real browser, deploying it, and filming it.**
 
 ---
 
-## Runway — ~73 hours
+## Runway — ~72 hours
 
-### Tonight, Mon 31 Aug (highest risk, do it first)
+### Tonight (highest risk, do it first)
 
-- [ ] `/webmcp-test` in WebMCP-enabled Chrome. Four green.
-- [ ] Same page in ChatGPT's in-app browser.
-- [ ] Fix whatever the real API disagrees with. Likely suspects: the exact
-      `execute` return shape, whether `annotations` is accepted as written,
-      whether `unregisterTool` throws where the wrapper expects.
+- [x] `/webmcp-test` in WebMCP-enabled Chrome. Four green, 00:46 IST.
+- [ ] Dashboard lists 6 Forge tools; `/shop` lists 5 after an Analyze.
+- [ ] Same pages in ChatGPT's in-app browser.
 - [ ] Deploy to Vercel. Re-test `/webmcp-test` **on the https URL**.
 - [ ] Resolve the origin trial token question.
-
-If this slips past tonight, cut scope Tuesday — not Wednesday.
 
 ### Tue 1 Sep
 
