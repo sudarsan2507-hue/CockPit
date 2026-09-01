@@ -90,10 +90,11 @@ export function Storefront() {
           <span className={webmcp ? "pill pill-ok" : "pill pill-warn"}>
             {webmcp === null ? "WebMCP ○ Checking" : webmcp ? "WebMCP ● Available" : "WebMCP ○ Unavailable"}
           </span>
-          <span className={registered.length ? "pill pill-ok" : "pill pill-idle"}>
+          {/* The before/after this whole product is about, so it gets the flash. */}
+          <span className={registered.length ? "pill pill-ok flash" : "pill pill-idle"}>
             {registered.length
-              ? `${registered.length} tools registered`
-              : "no tools"}
+              ? `${registered.length} WebMCP tools registered`
+              : "no WebMCP tools"}
           </span>
           <Link href="/" className="btn">
             ← Back to Forge
