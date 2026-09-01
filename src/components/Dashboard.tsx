@@ -132,6 +132,14 @@ export function Dashboard() {
 
         <PipelineRail stage={state.stage} />
 
+        {/* Both validate buttons run this one task, which is otherwise only
+            discoverable after clicking. */}
+        {scanned && !state.agentRun && (
+          <p className="subtle text-xs">
+            Both agents run the same task: <em>{store.AGENT_TASK}</em>
+          </p>
+        )}
+
         {state.error && (
           <p className="text-sm" style={{ color: "var(--bad)" }}>
             {state.error}
