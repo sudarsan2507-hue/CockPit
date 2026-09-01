@@ -72,6 +72,7 @@ export function ToolCard({
   onToggle: () => void;
 }) {
   const status = verdict?.verdict ?? "unscanned";
+  const findingCount = verdict?.findings.length ?? 0;
   const pill =
     status === "blocked" ? "pill pill-bad" : status === "verified" ? "pill pill-ok" : "pill pill-idle";
 
@@ -87,6 +88,13 @@ export function ToolCard({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {tool.annotations.readOnlyHint && <span className="pill pill-idle">read-only</span>}
+            {/* Surfaced while collapsed: a medium finding is otherwise invisible
+                on a tool whose verdict still reads "verified". */}
+            {!expanded && findingCount > 0 && (
+              <span className="pill pill-warn">
+                {findingCount} finding{findingCount > 1 ? "s" : ""}
+              </span>
+            )}
             <span className={pill}>
               {status === "blocked" ? "blocked" : status === "verified" ? "verified" : "unscanned"}
             </span>
