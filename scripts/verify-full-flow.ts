@@ -137,8 +137,12 @@ async function main() {
   ];
 
   const unregisterForge = registerTools(forgeTools);
-  console.log(`  ✓ WebMCP API detected: YES (document.modelContext)`);
-  console.log(`  ✓ Forge Tools Registered: ${Object.keys(registeredMockContext).length}/6`);
+  console.log(`  ! modelContext source: MOCK (no browser in this process)`);
+  const forgeRegistered = Object.keys(registeredMockContext).length;
+  console.log(
+    `  ${forgeRegistered === forgeTools.length ? "✓" : "✕"} Forge tools registered: ` +
+      `${forgeRegistered}/${forgeTools.length}`,
+  );
   Object.keys(registeredMockContext).forEach((name) => console.log(`      ✓ ${name}`));
 
   // B. Register Storefront generated tools
@@ -156,8 +160,14 @@ async function main() {
   }));
 
   const unregisterStorefront = registerTools(storefrontDefinitions);
-  console.log(`\n  ✓ Storefront Tools Registered: 5`);
-  manifest.tools.forEach((t) => console.log(`      ✓ ${t.name}`));
+  const storefrontRegistered = Object.keys(registeredMockContext).length - forgeRegistered;
+  console.log(
+    `\n  ${storefrontRegistered === storefrontDefinitions.length ? "✓" : "✕"} ` +
+      `Storefront tools registered: ${storefrontRegistered}/${storefrontDefinitions.length}`,
+  );
+  Object.keys(registeredMockContext)
+    .filter((name) => storefrontDefinitions.some((d) => d.name === name))
+    .forEach((name) => console.log(`      ✓ ${name}`));
 
   // 4. Real HTTP Execution of Generated Tools via PolicyGate
   console.log("\n--- 4. Real Execution of Generated Tools ---");
@@ -246,12 +256,18 @@ async function main() {
   console.log("\n==================================================");
   console.log("   FINAL VERIFICATION SUMMARY                     ");
   console.log("==================================================");
-  console.log("WebMCP API detected:         YES");
-  console.log("Forge tools registered:      6");
-  console.log("Storefront tools registered: 5");
-  console.log("Real browser execution:      PASS");
+  console.log(`Forge tools registered:      ${forgeRegistered}/${forgeTools.length}`);
+  console.log(
+    `Storefront tools registered: ${storefrontRegistered}/${storefrontDefinitions.length}`,
+  );
+  console.log("HTTP execution:              PASS (real requests to the dev server)");
   console.log("Security integration:        PASS");
   console.log("Agent discovery:             PASS");
+  console.log("--------------------------------------------------");
+  console.log("modelContext:                MOCK — NOT a browser check.");
+  console.log("This proves the registration calls are well formed. It says");
+  console.log("nothing about whether Chrome accepts them. For that, open");
+  console.log("/webmcp-test in a WebMCP-enabled browser.");
   console.log("==================================================\n");
 }
 
